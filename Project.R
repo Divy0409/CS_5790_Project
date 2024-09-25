@@ -8,8 +8,12 @@ install.packages(c("caret", "corrplot", "e1071", "lattice", "mlbench"))
 diabetes = read.csv("diabetic_data.csv")
 str(diabetes)
 
-# Missing values
+# Replace ? with NA
+diabetes[diabetes=="?"]<-NA
 
+# Convert non-numeric columns
+
+# Missing values
 image(is.na(diabetes), main="Missing Values", xlab="Observation", ylab="Variable", xaxt="n", yaxt="n", bty="n", col=topo.colors(6))
 axis(1,seq(0,1,length.out = nrow(diabetes)), 1:nrow(diabetes), col="white")
 
@@ -25,4 +29,9 @@ for(col in colNames) {
   print(col)
   print(var(diabetes[, col]), na.rm=TRUE)
 }
+
+# Find high correlations
+correlations <- cor(diabetes)
+highCorr <- findCorrelation(correlations, cutoff=0.75, names=TRUE, exact=TRUE)
+length(highCorr)
 
