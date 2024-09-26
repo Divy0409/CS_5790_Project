@@ -11,7 +11,26 @@ str(diabetes)
 # Replace ? with NA
 diabetes[diabetes=="?"]<-NA
 
-# Convert non-numeric columns
+# Separate predictors
+diabetes_pred <- diabetes[, -c(1:2, ncol(diabetes))]
+
+# Convert categorical vars to dummy
+library(caret)
+# Continuous vars + categorical with only one level
+con_cols = c("time_in_hospital", "num_lab_procedures", "num_procedures", 
+         "num_medications", "number_outpatient", "number_emergency", 
+         "number_inpatient", "number_diagnoses", "examide", "citoglipton")
+cat_cols <- setdiff(names(diabetes_pred), con_cols)
+diabetes_pred[, cat_cols] <- lapply(diabetes_pred[, cat_cols], as.factor)
+formula <- as.formula(paste("~", paste(cat_cols, collapse = "+")))
+dummRes <- dummyVars(formula, data=diabetes_pred, fullRank=TRUE)
+diabetes_dum <- data.frame(predict(dummRes, newdata=diabetes_pred))
+diabetes_result <- cbind(diabetes_pred[con_cols], diabetes_dum)
+
+# Find near-zero variance
+near_zero_idx <- nearZeroVar(diabetes_result, saveMetrics = TRUE)
+near_zero_vars <- rownames(near_zero_idx[near_zero_idx$nzv, ])
+print(near_zero_vars)
 
 # Missing values
 image(is.na(diabetes), main="Missing Values", xlab="Observation", ylab="Variable", xaxt="n", yaxt="n", bty="n", col=topo.colors(6))
@@ -22,13 +41,6 @@ library(naniar)
 print(n=100, miss_case_summary(diabetes))
 miss_var_summary(diabetes)
 n_miss(diabetes)
-
-colNames <- colnames(diabetes)
-print(colNames)
-for(col in colNames) {
-  print(col)
-  print(var(diabetes[, col]), na.rm=TRUE)
-}
 
 # Find high correlations
 correlations <- cor(diabetes)
