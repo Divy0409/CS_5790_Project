@@ -3,7 +3,7 @@
 
 # Install packages
 install.packages(c("caret", "corrplot", "e1071", "lattice", "mlbench"))
-
+library(corrr)
 # Load data
 diabetes = read.csv("diabetic_data.csv")
 str(diabetes)
