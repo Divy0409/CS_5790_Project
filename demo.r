@@ -1,5 +1,5 @@
 # Install necessary packages
-install.packages(c("caret", "corrplot", "e1071", "lattice", "mlbench", "naniar", "tidyverse"))
+install.packages(c("caret", "corrplot", "e1071", "lattice", "mlbench", "naniar", "tidyverse","DMwR2"))
 library(caret)
 library(corrplot)
 library(patchwork) # For combining plots
@@ -10,6 +10,7 @@ library(e1071)
 library(MASS)
 library(dplyr)
 library(tidyr)
+library(DMwR2)
 
 # Load data
 diabetes <- read.csv("diabetic_data.csv")
@@ -69,10 +70,14 @@ diabetes_clean <- diabetes_pred[, !(names(diabetes_pred) %in% cols_to_remove)]
 
 # Impute missing data (median for numeric, mode for categorical)
 # For numeric columns
-diabetes_clean[con_cols] <- lapply(diabetes_clean[con_cols], function(x) {
-  ifelse(is.na(x), median(x, na.rm = TRUE), x)
-})
+# Perform k-NN imputation on continuous variables
+preprocess_knn <- preProcess(diabetes_clean[con_cols], method = "knnImpute")
 
+# Apply the k-NN imputation
+diabetes_clean_knn <- predict(preprocess_knn, diabetes_clean[con_cols])
+
+# Check the structure of the imputed dataset
+str(diabetes_clean_knn)
 # For categorical columns (impute with mode or create a 'missing' category)
 # Re-identify categorical columns after removing columns with too many missing values
 cat_cols <- setdiff(names(diabetes_clean), con_cols)
@@ -80,9 +85,8 @@ cat_cols <- setdiff(names(diabetes_clean), con_cols)
 # Impute missing values for categorical columns by creating a 'Missing' category
 diabetes_clean[cat_cols] <- lapply(diabetes_clean[cat_cols], function(x) {
   x <- as.factor(x)
-  levels(x) <- c(levels(x), 'Missing')
-  x[is.na(x)] <- 'Missing'
-  return(x)
+  # Replace NA with "Missing" category
+  ifelse(is.na(x), 'Missing', as.character(x)) 
 })
 # Convert the factor columns back to factor
 diabetes_clean[cat_cols] <- lapply(diabetes_clean[cat_cols], as.factor)
@@ -96,7 +100,7 @@ dummRes <- dummyVars(formula, data = diabetes_clean, fullRank = TRUE)
 diabetes_dum <- data.frame(predict(dummRes, newdata = diabetes_clean))
 
 # Combine continuous variables with dummy variables
-diabetes_result <- cbind(diabetes_clean[con_cols], diabetes_dum)
+diabetes_result <- cbind(diabetes_clean_knn, diabetes_dum)
 
 # Remove near-zero variance predictors
 near_zero_idx <- nearZeroVar(diabetes_result)
@@ -132,14 +136,14 @@ con_cols <- c("time_in_hospital", "num_lab_procedures", "num_procedures",
               "number_inpatient", "number_diagnoses")
 
 # Calculate skewness for each continuous variable
-skewness_values <- sapply(diabetes_clean[con_cols], skewness, na.rm = TRUE)
+skewness_values <- sapply(diabetes_clean_knn, skewness, na.rm = TRUE)
 
 # Display the skewness values
 print("Skewness of continuous variables:")
 print(skewness_values)
 
 # Apply Box-Cox transformation, centering, and scaling to the continuous variables
-trans_boxcox <- preProcess(diabetes_clean[con_cols], method = c("center", "scale", "BoxCox"))
+trans_boxcox <- preProcess(diabetes_clean_knn, method = c("center", "scale", "BoxCox"))
 
 # Apply the transformations to the continuous variables
 diabetes_transformed <- predict(trans_boxcox, diabetes_clean[con_cols])
@@ -217,6 +221,7 @@ diabetes_final_spatial <- cbind(transformed_spatial, diabetes_clean[cat_cols])
 # Check the structure of the final transformed dataset with spatial sign
 str(diabetes_final_spatial)
 
+
 # Boxplots to identify outliers
 boxplots <- lapply(con_cols, function(var) {
   ggplot(diabetes_final_spatial, aes_string(y = var)) +
@@ -252,6 +257,8 @@ for (var in con_cols) {
 # For each categorical variable, create a bar plot showing the distribution of categories
 # Set up an empty list to store the bar plots
 barplots <- list()
+
+
 
 # Loop through categorical columns and create bar plots
 for (var in cat_cols) {

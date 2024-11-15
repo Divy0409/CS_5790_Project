@@ -216,7 +216,7 @@ print(boxplot_grid)
 transformed_spatial <- spatialSign(diabetes_transformed)
 
 # Combine the transformed spatial sign variables with the categorical variables
-diabetes_final_spatial <- cbind(transformed_spatial, diabetes_clean[cat_cols])
+diabetes_final_spatial <- cbind(transformed_spatial, diabetes_clean[cat_cols],readmitted = diabetes$readmitted)
 
 # Check the structure of the final transformed dataset with spatial sign
 str(diabetes_final_spatial)
@@ -277,6 +277,6 @@ barplot_grid <- wrap_plots(barplots, nrow = 9, ncol = 4)
 # Print the grid of barplots
 print(barplot_grid)
 # Save the cleaned data 
-write.csv(diabetes_final, "diabetes_cleaned.csv", row.names = FALSE)
+write.csv(diabetes_final_spatial, "diabetes_cleaned.csv", row.names = FALSE)
 
 
