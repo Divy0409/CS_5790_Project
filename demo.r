@@ -278,6 +278,14 @@ barplot_grid <- wrap_plots(barplots, nrow = 9, ncol = 4)
 
 # Print the grid of barplots
 print(barplot_grid)
+
+# PCA
+trans_pca <- preProcess(transformed_spatial, method = "pca")
+trans_pca
+transformed_pca <- predict(trans_pca, transformed_spatial)  
+dim(transformed_spatial)
+dim(transformed_pca)
+
 # Save the cleaned data 
 write.csv(diabetes_final, "diabetes_cleaned.csv", row.names = FALSE)
 
