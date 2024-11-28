@@ -28,31 +28,34 @@ con_cols <- c("time_in_hospital", "num_lab_procedures", "num_procedures",
               "number_inpatient", "number_diagnoses")
 
 cat_cols <- setdiff(names(diabetes_pred), con_cols)
+length(cat_cols)
+# name of the categorical columns
+cat_cols
 
-# Create histograms for each continuous predictor variable
-par(mfrow = c(3, 3))  # Arrange the plots in a 3x3 grid
+# # Create histograms for each continuous predictor variable
+# par(mfrow = c(3, 3))  # Arrange the plots in a 3x3 grid
 
-for (var in con_cols) {
-  hist_data <- hist(diabetes[[var]], 
-                    main = paste("Histogram of", var), 
-                    xlab = var, 
-                    col = "lightblue", 
-                    border = "black", 
-                    probability = TRUE)  # Set probability = TRUE for density line
+# for (var in con_cols) {
+#   hist_data <- hist(diabetes[[var]], 
+#                     main = paste("Histogram of", var), 
+#                     xlab = var, 
+#                     col = "lightblue", 
+#                     border = "black", 
+#                     probability = TRUE)  # Set probability = TRUE for density line
   
-  mean_val <- mean(diabetes[[var]], na.rm = TRUE)
-  sd_val <- sd(diabetes[[var]], na.rm = TRUE)
+#   mean_val <- mean(diabetes[[var]], na.rm = TRUE)
+#   sd_val <- sd(diabetes[[var]], na.rm = TRUE)
   
-  curve(dnorm(x, mean = mean_val, sd = sd_val), 
-        col = "red", 
-        lwd = 2, 
-        add = TRUE)
-}
+#   curve(dnorm(x, mean = mean_val, sd = sd_val), 
+#         col = "red", 
+#         lwd = 2, 
+#         add = TRUE)
+# }
 
-# Visualize missing values
-image(is.na(diabetes_pred), main = "Missing Values", xlab = "Observation", 
-      ylab = "Variable", xaxt = "n", yaxt = "n", bty = "n", col = topo.colors(6))
-axis(1, seq(0, 1, length.out = nrow(diabetes_pred)), 1:nrow(diabetes_pred), col = "white")
+# # Visualize missing values
+# image(is.na(diabetes_pred), main = "Missing Values", xlab = "Observation", 
+#       ylab = "Variable", xaxt = "n", yaxt = "n", bty = "n", col = topo.colors(6))
+# axis(1, seq(0, 1, length.out = nrow(diabetes_pred)), 1:nrow(diabetes_pred), col = "white")
 
 # Summarize missing data
 miss_var_summary(diabetes_pred)
@@ -68,19 +71,26 @@ print(cols_to_remove)
 diabetes_clean <- diabetes_pred[, !(names(diabetes_pred) %in% cols_to_remove)]
 
 
-# Impute missing data (median for numeric, mode for categorical)
-# For numeric columns
-# Perform k-NN imputation on continuous variables
-preprocess_knn <- preProcess(diabetes_clean[con_cols], method = "knnImpute")
-
-# Apply the k-NN imputation
-diabetes_clean_knn <- predict(preprocess_knn, diabetes_clean[con_cols])
-
-# Check the structure of the imputed dataset
-str(diabetes_clean_knn)
-# For categorical columns (impute with mode or create a 'missing' category)
-# Re-identify categorical columns after removing columns with too many missing values
+# Recalculate cat_cols after removing columns with high missing values
 cat_cols <- setdiff(names(diabetes_clean), con_cols)
+
+# Ensure categorical columns are factors
+diabetes_clean[cat_cols] <- lapply(diabetes_clean[cat_cols], as.factor)
+
+# Perform kNN imputation for the entire dataset
+imputed_data <- kNN(diabetes_clean, variable = names(diabetes_clean), k = 5)
+
+# Check the imputed result
+head(imputed_data)
+
+# Remove columns ending with "imp"
+imp_cols <- grep("imp$", colnames(imputed_data))
+diabetes_clean <- imputed_data[, -imp_cols]
+
+head(diabetes_clean)
+
+# Save the cleaned dataset
+write.csv(diabetes_clean, "diabetes_cleaned_impute.csv", row.names = FALSE)
 
 # Impute missing values for categorical columns by creating a 'Missing' category
 diabetes_clean[cat_cols] <- lapply(diabetes_clean[cat_cols], function(x) {
@@ -100,11 +110,13 @@ dummRes <- dummyVars(formula, data = diabetes_clean, fullRank = TRUE)
 diabetes_dum <- data.frame(predict(dummRes, newdata = diabetes_clean))
 
 # Combine continuous variables with dummy variables
-diabetes_result <- cbind(diabetes_clean_knn, diabetes_dum)
+diabetes_result <- cbind(diabetes_clean, diabetes_dum)
 
 # Remove near-zero variance predictors
 near_zero_idx <- nearZeroVar(diabetes_result)
 diabetes_nzv <- diabetes_result[, -near_zero_idx]
+
+write.csv(diabetes_nzv, "diabetes_cleaned_impute_dummies.csv", row.names = FALSE)
 
 # Correlation Analysis
 # Separate the numeric columns for correlation analysis
@@ -130,20 +142,23 @@ print(highCorr)
 diabetes_final <- diabetes_nzv[, !(names(diabetes_nzv) %in% highCorr)]
 str(diabetes_final)
 
-# Define the continuous variables
-con_cols <- c("time_in_hospital", "num_lab_procedures", "num_procedures", 
-              "num_medications", "number_outpatient", "number_emergency", 
-              "number_inpatient", "number_diagnoses")
-
 # Calculate skewness for each continuous variable
-skewness_values <- sapply(diabetes_clean_knn, skewness, na.rm = TRUE)
+skewness_values <- sapply(diabetes_final, skewness, na.rm = TRUE)
 
 # Display the skewness values
 print("Skewness of continuous variables:")
 print(skewness_values)
 
+# Define the continuous variables
+con_cols <- c("time_in_hospital", "num_lab_procedures", "num_procedures", 
+              "num_medications", "number_outpatient", "number_emergency", 
+              "number_inpatient", "number_diagnoses")
+
+# Ensure the continuous columns are available in the dataset
+diabetes_clean_con <- diabetes_clean[, con_cols]
+
 # Apply Box-Cox transformation, centering, and scaling to the continuous variables
-trans_boxcox <- preProcess(diabetes_clean_knn, method = c("center", "scale", "BoxCox"))
+trans_boxcox <- preProcess(diabetes_clean_con, method = c("center", "scale", "BoxCox"))
 
 # Apply the transformations to the continuous variables
 diabetes_transformed <- predict(trans_boxcox, diabetes_clean[con_cols])
@@ -213,10 +228,10 @@ boxplot_grid <- wrap_plots(boxplots, nrow = 3, ncol = 3)
 print(boxplot_grid)
 
 # Apply the spatial sign transformation to only continuous variables
-transformed_spatial <- spatialSign(diabetes_transformed)
+transformed_spatial <- spatialSign(diabetes_final_transformed[con_cols])
 
 # Combine the transformed spatial sign variables with the categorical variables
-diabetes_final_spatial <- cbind(transformed_spatial, diabetes_clean[cat_cols])
+diabetes_final_spatial <- cbind(transformed_spatial, diabetes_clean[cat_cols],readmitted = diabetes$readmitted)
 
 # Check the structure of the final transformed dataset with spatial sign
 str(diabetes_final_spatial)
@@ -287,6 +302,44 @@ dim(transformed_spatial)
 dim(transformed_pca)
 
 # Save the cleaned data 
-write.csv(diabetes_final, "diabetes_cleaned.csv", row.names = FALSE)
+write.csv(diabetes_final_spatial, "diabetes_cleaned.csv", row.names = FALSE)
 
+diabetes <- read.csv("diabetes_cleaned.csv")
+str(diabetes)
+
+# Remove unnecessary columns
+diabetes <- diabetes %>% dplyr::select(-c(admission_type_id, discharge_disposition_id, admission_source_id,diag_2,diag_3))
+colnames(diabetes)
+
+# Categorizqation 
+diabetes$diag_1 <- as.character(diabetes$diag_1)
+
+diabetes <- mutate(diabetes, primary_diagnosis =
+                                          ifelse(str_detect(diag_1, "V") | str_detect(diag_1, "E"),"Other", 
+                                          # disease codes starting with V or E are in “other” category;
+                                          ifelse(str_detect(diag_1, "250"), "Diabetes",
+                                          ifelse((as.integer(diag_1) >= 390 & as.integer(diag_1) <= 459) | as.integer(diag_1) == 785, "Circulatory",
+                                          ifelse((as.integer(diag_1) >= 460 & as.integer(diag_1) <= 519) | as.integer(diag_1) == 786, "Respiratory", 
+                                          ifelse((as.integer(diag_1) >= 520 & as.integer(diag_1) <= 579) | as.integer(diag_1) == 787, "Digestive", 
+                                          ifelse((as.integer(diag_1) >= 580 & as.integer(diag_1) <= 629) | as.integer(diag_1) == 788, "Genitourinary",
+                                          ifelse((as.integer(diag_1) >= 140 & as.integer(diag_1) <= 239), "Neoplasms",  
+                                          ifelse((as.integer(diag_1) >= 710 & as.integer(diag_1) <= 739), "Musculoskeletal",          
+                                          ifelse((as.integer(diag_1) >= 800 & as.integer(diag_1) <= 999), "Injury",                    
+                                          "Other"))))))))))
+
+# Drop the original diag_1 column
+diabetes <- diabetes %>% dplyr::select(-diag_1)
+
+diabetes$primary_diagnosis <- as.factor(diabetes$primary_diagnosis)
+table(diabetes$primary_diagnosis)
+
+diabetes$readmitted <- case_when(diabetes$readmitted %in% c(">30", "NO") ~ "NO",
+                                diabetes$readmitted %in% c("<30") ~ "YES")
+diabetes$readmitted <- as.factor(diabetes$readmitted)
+levels(diabetes$readmitted)
+table(diabetes$readmitted)
+str(diabetes)
+
+# Save the cleaned data
+write.csv(diabetes, "diabetes_cleaned.csv", row.names = FALSE)
 

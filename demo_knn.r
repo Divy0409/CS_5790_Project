@@ -11,6 +11,7 @@ library(MASS)
 library(dplyr)
 library(tidyr)
 library(DMwR2)
+library(VIM)
 
 # Load data
 diabetes <- read.csv("diabetic_data.csv")
@@ -67,29 +68,26 @@ print(cols_to_remove)
 
 diabetes_clean <- diabetes_pred[, !(names(diabetes_pred) %in% cols_to_remove)]
 
-
-# Impute missing data (median for numeric, mode for categorical)
-# For numeric columns
-# Perform k-NN imputation on continuous variables
-preprocess_knn <- preProcess(diabetes_clean[con_cols], method = "knnImpute")
-
-# Apply the k-NN imputation
-diabetes_clean_knn <- predict(preprocess_knn, diabetes_clean[con_cols])
-
-# Check the structure of the imputed dataset
-str(diabetes_clean_knn)
-# For categorical columns (impute with mode or create a 'missing' category)
-# Re-identify categorical columns after removing columns with too many missing values
+# Recalculate cat_cols after removing columns with high missing values
 cat_cols <- setdiff(names(diabetes_clean), con_cols)
 
-# Impute missing values for categorical columns by creating a 'Missing' category
-diabetes_clean[cat_cols] <- lapply(diabetes_clean[cat_cols], function(x) {
-  x <- as.factor(x)
-  # Replace NA with "Missing" category
-  ifelse(is.na(x), 'Missing', as.character(x)) 
-})
-# Convert the factor columns back to factor
+# Ensure categorical columns are factors
 diabetes_clean[cat_cols] <- lapply(diabetes_clean[cat_cols], as.factor)
+
+# Perform kNN imputation for the entire dataset
+imputed_data <- kNN(diabetes_clean, variable = names(diabetes_clean), k = 5)
+
+# Check the imputed result
+head(imputed_data)
+
+# Remove columns ending with "imp"
+imp_cols <- grep("imp$", colnames(imputed_data))
+diabetes_clean <- imputed_data[, -imp_cols]
+
+head(diabetes_clean)
+
+# Save the cleaned dataset
+write.csv(diabetes_clean, "diabetes_cleaned_impute.csv", row.names = FALSE)
 
 # Remove categorical columns with only one unique level
 cat_cols <- cat_cols[sapply(diabetes_clean[cat_cols], function(x) nlevels(x) > 1)]
@@ -100,11 +98,13 @@ dummRes <- dummyVars(formula, data = diabetes_clean, fullRank = TRUE)
 diabetes_dum <- data.frame(predict(dummRes, newdata = diabetes_clean))
 
 # Combine continuous variables with dummy variables
-diabetes_result <- cbind(diabetes_clean_knn, diabetes_dum)
+diabetes_result <- cbind(diabetes_clean, diabetes_dum)
 
 # Remove near-zero variance predictors
 near_zero_idx <- nearZeroVar(diabetes_result)
 diabetes_nzv <- diabetes_result[, -near_zero_idx]
+
+write.csv(diabetes_nzv, "diabetes_cleaned_impute_dummies.csv", row.names = FALSE)
 
 # Correlation Analysis
 # Separate the numeric columns for correlation analysis
@@ -130,23 +130,29 @@ print(highCorr)
 diabetes_final <- diabetes_nzv[, !(names(diabetes_nzv) %in% highCorr)]
 str(diabetes_final)
 
-# Define the continuous variables
-con_cols <- c("time_in_hospital", "num_lab_procedures", "num_procedures", 
-              "num_medications", "number_outpatient", "number_emergency", 
-              "number_inpatient", "number_diagnoses")
-
 # Calculate skewness for each continuous variable
-skewness_values <- sapply(diabetes_clean_knn, skewness, na.rm = TRUE)
+skewness_values <- sapply(diabetes_final, skewness, na.rm = TRUE)
 
 # Display the skewness values
 print("Skewness of continuous variables:")
 print(skewness_values)
 
 # Apply Box-Cox transformation, centering, and scaling to the continuous variables
-trans_boxcox <- preProcess(diabetes_clean_knn, method = c("center", "scale", "BoxCox"))
+trans_boxcox <- preProcess(diabetes_final, method = c("center", "scale", "BoxCox"))
+
+con_cols <- c("time_in_hospital", "num_lab_procedures", "num_procedures", 
+              "num_medications", "number_outpatient", "number_emergency", 
+              "number_inpatient", "number_diagnoses")
+
+# Ensure the continuous columns are available in the dataset
+diabetes_clean_con <- diabetes_clean[, con_cols]
+
+# Apply Box-Cox transformation and scaling to continuous variables
+trans_boxcox <- preProcess(diabetes_clean_con, method = c("center", "scale", "BoxCox"))
+
 
 # Apply the transformations to the continuous variables
-diabetes_transformed <- predict(trans_boxcox, diabetes_clean[con_cols])
+diabetes_transformed <- predict(trans_boxcox, diabetes_clean_con)
 
 # View the transformed data
 str(diabetes_transformed)
@@ -213,7 +219,7 @@ boxplot_grid <- wrap_plots(boxplots, nrow = 3, ncol = 3)
 print(boxplot_grid)
 
 # Apply the spatial sign transformation to only continuous variables
-transformed_spatial <- spatialSign(diabetes_transformed)
+transformed_spatial <- spatialSign(diabetes_final_transformed)
 
 # Combine the transformed spatial sign variables with the categorical variables
 diabetes_final_spatial <- cbind(transformed_spatial, diabetes_clean[cat_cols],readmitted = diabetes$readmitted)
