@@ -42,14 +42,14 @@ trainIndex <- createDataPartition(diabetes$readmitted, p = 0.7,
 train_data <- diabetes[trainIndex, ]
 test_data <- diabetes[-trainIndex, ]
 
-control <- trainControl(method = "repeatedcv", number = 5, repeats = 3, sampling = "down", classProbs = TRUE, summaryFunction = twoClassSummary)
+control <- trainControl(method = "repeatedcv", number = 5, repeats = 3, sampling = "down", classProbs = TRUE, summaryFunction = defaultSummary)
 
 tuneGrid <- expand.grid(fL = 0:1, usekernel = TRUE, adjust = TRUE)
 
 # Train a binomial logistic regression model using caret
 nb_model <- train(readmitted ~ ., data = train_data, 
                    method = "nb", tuneGrid = tuneGrid,
-                   trControl = control, preProcess=c("center", "scale"))
+                   trControl = control, preProcess=c("center", "scale"),metric = "Kappa")
 nb_model
 
 # Make predictions on the test set

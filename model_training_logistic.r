@@ -37,13 +37,13 @@ trainIndex <- createDataPartition(diabetes$readmitted, p = 0.7,
 train_data <- diabetes[trainIndex, ]
 test_data <- diabetes[-trainIndex, ]
 
-control <- trainControl(method = "repeatedcv", number = 5, repeats = 3, sampling = "down", classProbs = TRUE, summaryFunction = twoClassSummary)
+control <- trainControl(method = "repeatedcv", number = 5, repeats = 3, sampling = "down", classProbs = TRUE, summaryFunction = defaultSummary)
 
 # Train a binomial logistic regression model using caret
 log_model <- train(readmitted ~ ., data = train_data, 
                    method = "glm", 
                    family = "binomial",
-                   trControl = control)
+                   trControl = control, metric = "Kappa")
 log_model
 
 # Make predictions on the test set

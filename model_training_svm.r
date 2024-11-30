@@ -42,19 +42,19 @@ trainIndex <- createDataPartition(diabetes$readmitted, p = 0.7,
 train_data <- diabetes[trainIndex, ]
 test_data <- diabetes[-trainIndex, ]
 
-control <- trainControl(method = "repeatedcv", number = 5, repeats = 3, sampling = "down", classProbs = TRUE, summaryFunction = twoClassSummary)
+control <- trainControl(method = "repeatedcv", number = 5, repeats = 3, sampling = "down", classProbs = TRUE, summaryFunction = defaultSummary)
 
 tuneGrid <- expand.grid(
-  sigma = c(0.01, 0.5),    # Expanded range for sigma
-  C = c(1, 10)                 # Wider range for C
+  sigma = c(0.01, 0.5, 1),
+  C = c(0.1,1, 10)                 
 )
 
 # Train a binomial logistic regression model using caret
 svm_model <- train(readmitted ~ ., data = train_data, 
-                   method = "svmRadial", tuneGrid = tuneGrid,
+                   method = "svmRadial", tuneGrid = tuneGrid, metric = "Kappa",
                    trControl = control, preProcess=c("center", "scale"), fit=FALSE)
 svm_model
-
+plot(svm_model)
 # Make predictions on the test set
 # Ensure `test_data$readmitted` is a factor with correct levels
 test_data$readmitted <- factor(test_data$readmitted, levels = c("NO", "YES"))

@@ -42,12 +42,12 @@ trainIndex <- createDataPartition(diabetes$readmitted, p = 0.7,
 train_data <- diabetes[trainIndex, ]
 test_data <- diabetes[-trainIndex, ]
 
-control <- trainControl(method = "repeatedcv", number = 5, repeats = 3, sampling = "down", classProbs = TRUE, summaryFunction = twoClassSummary)
+control <- trainControl(method = "repeatedcv", number = 5, repeats = 3, sampling = "down", classProbs = TRUE, summaryFunction = defaultSummary)
 tuneGrid <- expand.grid(size = 1:10, decay = c(0, 0.1, 0.01,1))
 
 # Train a binomial logistic regression model using caret
 nnet_model <- train(readmitted ~ ., data = train_data, 
-                   method = "nnet", tuneGrid = tuneGrid,
+                   method = "nnet", tuneGrid = tuneGrid, metric="Kappa",
                    trControl = control,preProcess=c("center", "scale"), trace = FALSE)
 nnet_model
 plot(nnet_model)
@@ -61,10 +61,3 @@ predictions <- factor(predict(nnet_model, newdata = test_data), levels = c("NO",
 
 # Generate confusion matrix
 confusionMatrix(predictions, test_data$readmitted)
-
-# Plot ROC curve
-roc_curve <- roc(test_data$readmitted, as.numeric(predictions))
-plot(roc_curve, col = "blue", lwd = 2, main = "ROC Curve")
-lines(x = c(0, 1), y = c(0, 1), col = "red", lty = 2)
-auc(roc_curve)
-

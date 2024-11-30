@@ -42,15 +42,16 @@ trainIndex <- createDataPartition(diabetes$readmitted, p = 0.7,
 train_data <- diabetes[trainIndex, ]
 test_data <- diabetes[-trainIndex, ]
 
-control <- trainControl(method = "repeatedcv", number = 5, repeats = 3, sampling = "down", classProbs = TRUE, summaryFunction = twoClassSummary)
+control <- trainControl(method = "repeatedcv", number = 5, repeats = 3, sampling = "down", classProbs = TRUE, summaryFunction = defaultSummary)
 
 tuneGrid <- expand.grid(k = 1:10)
 
 # Train a binomial logistic regression model using caret
 knn_model <- train(readmitted ~ ., data = train_data, 
-                   method = "knn", tuneGrid = tuneGrid,
+                   method = "knn", tuneGrid = tuneGrid,metric="Kappa",
                    trControl = control, preProcess=c("center", "scale"))
 knn_model
+plot(knn_model)
 
 # Make predictions on the test set
 # Ensure `test_data$readmitted` is a factor with correct levels
