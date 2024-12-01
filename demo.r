@@ -92,15 +92,6 @@ head(diabetes_clean)
 # Save the cleaned dataset
 write.csv(diabetes_clean, "diabetes_cleaned_impute.csv", row.names = FALSE)
 
-# Impute missing values for categorical columns by creating a 'Missing' category
-diabetes_clean[cat_cols] <- lapply(diabetes_clean[cat_cols], function(x) {
-  x <- as.factor(x)
-  # Replace NA with "Missing" category
-  ifelse(is.na(x), 'Missing', as.character(x)) 
-})
-# Convert the factor columns back to factor
-diabetes_clean[cat_cols] <- lapply(diabetes_clean[cat_cols], as.factor)
-
 # Remove categorical columns with only one unique level
 cat_cols <- cat_cols[sapply(diabetes_clean[cat_cols], function(x) nlevels(x) > 1)]
 
