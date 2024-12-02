@@ -78,7 +78,7 @@ cat_cols <- setdiff(names(diabetes_clean), con_cols)
 diabetes_clean[cat_cols] <- lapply(diabetes_clean[cat_cols], as.factor)
 
 # Perform kNN imputation for the entire dataset
-imputed_data <- kNN(diabetes_clean, variable = names(diabetes_clean), k = 5)
+imputed_data <- kNN(train = diabetes_clean, variable = names(diabetes_clean), k = 5)
 
 # Check the imputed result
 head(imputed_data)

@@ -20,20 +20,6 @@ library(klaR)
 # Load your cleaned dataset
 diabetes <- read.csv("diabetes_cleaned.csv")
 str(diabetes)
-table(diabetes$gender)
-# Remove rows where gender is "Unknown/Invalid"
-diabetes <- subset(diabetes, gender != "Unknown/Invalid")
-table(diabetes$gender)
-table(diabetes$readmitted)
-cat_vars <- diabetes %>% dplyr::select(where(is.character))  # Select character columns
-sapply(cat_vars, unique)  # Check unique values for each
-
-nzv <- nearZeroVar(diabetes, saveMetrics = TRUE)
-nzv_indices <- nearZeroVar(diabetes)  # Indices of near-zero variance columns
-diabetes <- diabetes[, -nzv_indices]  # Remove these columns
-
-
-
 
 # Split the data into training and testing sets (70-30 split)
 set.seed(123)  # For reproducibility
@@ -42,7 +28,7 @@ trainIndex <- createDataPartition(diabetes$readmitted, p = 0.7,
 train_data <- diabetes[trainIndex, ]
 test_data <- diabetes[-trainIndex, ]
 
-control <- trainControl(method = "repeatedcv", number = 5, repeats = 3, sampling = "down", classProbs = TRUE, summaryFunction = defaultSummary)
+control <- trainControl(method = "cv", number = 10, sampling = "down", classProbs = TRUE, summaryFunction = defaultSummary)
 
 tuneGrid <- expand.grid(k = 1:10)
 
