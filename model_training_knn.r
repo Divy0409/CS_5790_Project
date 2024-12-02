@@ -49,9 +49,3 @@ predictions <- factor(predict(knn_model, newdata = test_data), levels = c("NO", 
 # Generate confusion matrix
 confusionMatrix(predictions, test_data$readmitted)
 
-# Plot ROC curve
-roc_curve <- roc(test_data$readmitted, as.numeric(predictions))
-plot(roc_curve, col = "blue", lwd = 2, main = "ROC Curve")
-lines(x = c(0, 1), y = c(0, 1), col = "red", lty = 2)
-auc(roc_curve)
-
