@@ -32,7 +32,9 @@ control <- trainControl(method = "cv", number = 10,  sampling = "down", classPro
 # Train a binomial logistic regression model using caret
 lda_model <- train(readmitted ~ ., data = train_data, 
                    method = "lda",
-                   trControl = control,preProcess=c("center", "scale"),metric = "Kappa")
+                   trControl = control,
+                   preProcess=c("center", "scale"),
+                   metric = "Kappa")
 lda_model
 
 # Make predictions on the test set
@@ -41,6 +43,9 @@ test_data$readmitted <- factor(test_data$readmitted, levels = c("NO", "YES"))
 
 # Make predictions and convert to factor
 predictions <- factor(predict(lda_model, newdata = test_data), levels = c("NO", "YES"))
+
+# Statistics for test set
+postResample(pred = predictions, obs = test_data$readmitted)
 
 # Generate confusion matrix
 confusionMatrix(predictions, test_data$readmitted)

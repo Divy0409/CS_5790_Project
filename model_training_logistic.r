@@ -42,6 +42,9 @@ test_data$readmitted <- factor(test_data$readmitted, levels = c("NO", "YES"))
 # Make predictions and convert to factor
 predictions <- factor(predict(log_model, newdata = test_data), levels = c("NO", "YES"))
 
+# Statistics for test set
+postResample(pred = predictions, obs = test_data$readmitted)
+
 # Generate confusion matrix
 confusionMatrix(predictions, test_data$readmitted)
 
