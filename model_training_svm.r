@@ -28,7 +28,7 @@ trainIndex <- createDataPartition(diabetes$readmitted, p = 0.7,
 train_data <- diabetes[trainIndex, ]
 test_data <- diabetes[-trainIndex, ]
 
-control <- trainControl(method = "cv", number = 10, sampling = "down", classProbs = TRUE, summaryFunction = defaultSummary)
+control <- trainControl(method = "cv", number = 10, repeats = 3, sampling = "down", classProbs = TRUE, summaryFunction = defaultSummary)
 
 tuneGrid <- expand.grid(
   sigma = c(0.01, 0.5, 1),
@@ -50,10 +50,4 @@ predictions <- factor(predict(svm_model, newdata = test_data), levels = c("NO", 
 
 # Generate confusion matrix
 confusionMatrix(predictions, test_data$readmitted)
-
-# Plot ROC curve
-roc_curve <- roc(test_data$readmitted, as.numeric(predictions))
-plot(roc_curve, col = "blue", lwd = 2, main = "ROC Curve")
-lines(x = c(0, 1), y = c(0, 1), col = "red", lty = 2)
-auc(roc_curve)
 
