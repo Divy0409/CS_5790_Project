@@ -30,22 +30,23 @@ test_data <- diabetes[-trainIndex, ]
 
 control <- trainControl(method = "cv", number = 10, sampling = "down", classProbs = TRUE, summaryFunction = defaultSummary)
 
-# Train a mda model using caret
-mda_model <- train(readmitted ~ ., data = train_data, 
-                   method = "mda",metric="Kappa",
-                   tuneGrid = expand.grid(.subclasses = 1:4),
-                   trControl = control,preProcess=c("center", "scale"))
-mda_model
+# Train a rda model using caret
+tune_grid <- expand.grid(.lambda = c(0, 0.01, 0.1, 1, 10), 
+                         .gamma = seq(0, 2, length.out = 10))  
+rda_model <- train(readmitted ~ ., data = train_data, 
+                   method = "rda",metric="Kappa",
+                   tuneGrid = tune_grid,
+                   trControl = control)
+rda_model
 
-# Plot
-plot(mda_model, cex = 1, lwd = 2, pch = 16, main = "MDA Tuning Plot", col="seagreen4")
+plot(rda_model)
 
 # Make predictions on the test set
 # Ensure `test_data$readmitted` is a factor with correct levels
 test_data$readmitted <- factor(test_data$readmitted, levels = c("NO", "YES"))
 
 # Make predictions and convert to factor
-predictions <- factor(predict(mda_model, newdata = test_data), levels = c("NO", "YES"))
+predictions <- factor(predict(rda_model, newdata = test_data), levels = c("NO", "YES"))
 
 # Statistics for test set
 postResample(pred = predictions, obs = test_data$readmitted)

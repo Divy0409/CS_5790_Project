@@ -34,7 +34,7 @@ plsda_model <- train(readmitted ~ .,
                    method = "pls", 
                    metric = "Kappa",
                    trControl = control,
-                   tuneGrid = expand.grid(.ncomp = 1:10), 
+                   tuneGrid = expand.grid(.ncomp = 1:20), 
                    preProcess=c("center", "scale"))
 plsda_model
 

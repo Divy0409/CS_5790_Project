@@ -31,12 +31,14 @@ control <- trainControl(method = "cv", number = 10, sampling = "down", classProb
 
 tuneGrid <- expand.grid(degree = 1:3, nprune = 1:10)
 
-# Train a binomial logistic regression model using caret
+# Train a fda model using caret
 fda_model <- train(readmitted ~ ., data = train_data, 
-                   method = "earth", tuneGrid = tuneGrid,
+                   method = "fda", tuneGrid = tuneGrid,
                    trControl = control,preProcess=c("center", "scale"),metric = "Kappa")
 fda_model
-plot(fda_model)
+
+# Plot
+plot(fda_model, cex = 1, lwd = 2, pch = 16, main = "FDA Tuning Plot")
 
 # Make predictions on the test set
 # Ensure `test_data$readmitted` is a factor with correct levels
@@ -44,6 +46,9 @@ test_data$readmitted <- factor(test_data$readmitted, levels = c("NO", "YES"))
 
 # Make predictions and convert to factor
 predictions <- factor(predict(fda_model, newdata = test_data), levels = c("NO", "YES"))
+
+# Statistics for test set
+postResample(pred = predictions, obs = test_data$readmitted)
 
 # Generate confusion matrix
 confusionMatrix(predictions, test_data$readmitted)

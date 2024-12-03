@@ -37,7 +37,7 @@ enet_model <- train(readmitted ~ ., data = train_data,
                    tuneGrid = glm_grid,
                    trControl = control, preProcess=c("center", "scale"), metric = "Kappa")
 enet_model
-plot(enet_model, cex = 1, lwd = 2, pch = 16, main = "glmnet Tuning Plot")
+plot(enet_model, cex = 1, lwd = 2, pch = 16, main = "Penalized Model Tuning Plot")
 
 # Make predictions on the test set
 # Ensure `test_data$readmitted` is a factor with correct levels
