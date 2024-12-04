@@ -54,8 +54,3 @@ postResample(pred = predictions, obs = test_data$readmitted)
 # Generate confusion matrix
 confusionMatrix(predictions, test_data$readmitted)
 
-# Variable Importance
-knnImp <- varImp(knn_model)
-knnImp
-plot(knnImp, top = 10, col = "seagreen4", main = "KNN Variable Importance")
-
