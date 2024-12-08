@@ -34,9 +34,30 @@ registerDoParallel(cl)
 
 control <- trainControl(method = "cv", number = 10, sampling = "down", classProbs = TRUE, summaryFunction = defaultSummary,allowParallel = TRUE)
 
+library(kernlab)
+library(caret)
 sigmaRange <- c(0.01, 0.1, 0.5, 1)
-tuneGrid <- expand.grid(.sigma = sigmaRange,
-                                 .C = 2^(seq(-4, 6, by = 2)))
+train_x <- train_data[, -ncol(train_data) + 1]
+train_x <- lapply(train_x, function(x) {
+  if (is.character(x)) {
+    factor(x)
+  } else {
+    x  
+  }
+})
+train_x <- lapply(train_x, function(x) {
+  if (is.factor(x)) {
+    as.numeric(x)
+  } else {
+    x  
+  }
+})
+train_x <- as.data.frame(train_x)
+
+options(warn=1)
+sigmaRangeReduced <- sigest(as.matrix(train_x))
+tuneGrid <- expand.grid(.sigma = sigmaRangeReduced[1],
+                               .C = 2^(seq(-4, 6)))
 
 # Train a binomial logistic regression model using caret
 svm_model <- train(readmitted ~ ., data = train_data, 
