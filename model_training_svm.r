@@ -36,7 +36,6 @@ control <- trainControl(method = "cv", number = 10, sampling = "down", classProb
 
 library(kernlab)
 library(caret)
-sigmaRange <- c(0.01, 0.1, 0.5, 1)
 train_x <- train_data[, -ncol(train_data) + 1]
 train_x <- lapply(train_x, function(x) {
   if (is.character(x)) {
