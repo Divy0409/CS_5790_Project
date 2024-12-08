@@ -53,4 +53,7 @@ postResample(pred = predictions, obs = test_data$readmitted)
 # Generate confusion matrix
 confusionMatrix(predictions, test_data$readmitted)
 
-
+# Variable Importance
+fda_imp <- varImp(fda_model)
+fda_imp
+plot(fda_imp, col = "seagreen4", main = "FDA Variable Importance")

@@ -28,7 +28,7 @@ trainIndex <- createDataPartition(diabetes$readmitted, p = 0.7,
 train_data <- diabetes[trainIndex, ]
 test_data <- diabetes[-trainIndex, ]
 
-control <- trainControl(method = "cv", number = 10, sampling = "down", classProbs = TRUE, summaryFunction = defaultSummary)
+control <- trainControl(method = "cv", number = 10, sampling = "down", summaryFunction = defaultSummary, savePredictions=TRUE)
 
 # Train a rda model using caret
 tune_grid <- expand.grid(.lambda = c(0, 0.01, 0.1, 1, 10), 
@@ -39,14 +39,14 @@ rda_model <- train(readmitted ~ ., data = train_data,
                    trControl = control)
 rda_model
 
-plot(rda_model)
+plot(rda_model, cex = 1, lwd = 2, pch = 16, main = "RDA Tuning Plot")
 
 # Make predictions on the test set
 # Ensure `test_data$readmitted` is a factor with correct levels
 test_data$readmitted <- factor(test_data$readmitted, levels = c("NO", "YES"))
 
 # Make predictions and convert to factor
-predictions <- factor(predict(rda_model, newdata = test_data), levels = c("NO", "YES"))
+predictions <- predict(rda_model, newdata = test_data)
 
 # Statistics for test set
 postResample(pred = predictions, obs = test_data$readmitted)
