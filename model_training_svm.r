@@ -15,7 +15,7 @@ library(ROCR)
 library(pROC)
 library(earth)
 library(klaR)
-
+library(doParallel)
 
 # Load your cleaned dataset
 diabetes <- read.csv("diabetes_cleaned.csv")
@@ -28,12 +28,15 @@ trainIndex <- createDataPartition(diabetes$readmitted, p = 0.7,
 train_data <- diabetes[trainIndex, ]
 test_data <- diabetes[-trainIndex, ]
 
-control <- trainControl(method = "cv", number = 10, repeats = 3, sampling = "down", classProbs = TRUE, summaryFunction = defaultSummary)
+# Set up parallel processing with 6 cores
+cl <- makeCluster(6)  # Use exactly 6 cores
+registerDoParallel(cl)
 
-tuneGrid <- expand.grid(
-  sigma = c(0.01, 0.5, 1),
-  C = c(0.1,1, 10)                 
-)
+control <- trainControl(method = "cv", number = 10, sampling = "down", classProbs = TRUE, summaryFunction = defaultSummary,allowParallel = TRUE)
+
+sigmaRange <- c(0.01, 0.1, 0.5, 1)
+tuneGrid <- expand.grid(.sigma = sigmaRange,
+                                 .C = 2^(seq(-4, 6, by = 2)))
 
 # Train a binomial logistic regression model using caret
 svm_model <- train(readmitted ~ ., data = train_data, 
@@ -45,8 +48,12 @@ plot(svm_model)
 # Ensure `test_data$readmitted` is a factor with correct levels
 test_data$readmitted <- factor(test_data$readmitted, levels = c("NO", "YES"))
 
+
 # Make predictions and convert to factor
 predictions <- factor(predict(svm_model, newdata = test_data), levels = c("NO", "YES"))
+
+# Statistics for test set
+postResample(pred = predictions, obs = test_data$readmitted)
 
 # Generate confusion matrix
 confusionMatrix(predictions, test_data$readmitted)
