@@ -51,3 +51,8 @@ postResample(pred = predictions, obs = test_data$readmitted)
 
 # Generate confusion matrix
 confusionMatrix(predictions, test_data$readmitted)
+
+# Variable Importance
+enet_imp <- varImp(enet_model)
+enet_imp
+plot(enet_imp, col = "seagreen4", main = "Penalized Model Variable Importance")
