@@ -30,6 +30,32 @@ con_cols <- c("time_in_hospital", "num_lab_procedures", "num_procedures",
               "number_inpatient", "number_diagnoses")
 cat_cols <- setdiff(names(diabetes_pred), con_cols)
 
+# # Create histograms for each continuous predictor variable
+par(mfrow = c(3, 3))  # Arrange the plots in a 3x3 grid
+
+for (var in con_cols) {
+  hist_data <- hist(diabetes[[var]], 
+                    main = paste("Histogram of", var), 
+                    xlab = var, 
+                    col = "lightblue", 
+                    border = "black", 
+                    probability = TRUE)  # Set probability = TRUE for density line
+  
+  mean_val <- mean(diabetes[[var]], na.rm = TRUE)
+  sd_val <- sd(diabetes[[var]], na.rm = TRUE)
+  
+  curve(dnorm(x, mean = mean_val, sd = sd_val), 
+        col = "red", 
+        lwd = 2, 
+        add = TRUE)
+}
+
+# Visualize missing values
+image(is.na(diabetes_pred), main = "Missing Values", xlab = "Observation", 
+      ylab = "Variable", xaxt = "n", yaxt = "n", bty = "n", col = topo.colors(6))
+axis(1, seq(0, 1, length.out = nrow(diabetes_pred)), 1:nrow(diabetes_pred), col = "white")
+
+
 # Summarize missing data
 miss_var_summary(diabetes_pred)
 n_miss(diabetes_pred)
@@ -117,9 +143,116 @@ diabetes_con <- diabetes[, con_cols]
 trans_boxcox <- preProcess(diabetes_con, method = c("center", "scale", "BoxCox"))
 diabetes_transformed <- predict(trans_boxcox, diabetes_con)
 
+# Create histograms for each continous predictor variable
+par(mfrow = c(3, 3))  # Arrange the plots in a 3x3 grid
+
+for (var in con_cols) {
+  hist_data <- hist(diabetes_transformed[[var]], 
+                    main = paste("Histogram of", var), 
+                    xlab = var, 
+                    col = "lightblue", 
+                    border = "black", 
+                    probability = TRUE)  # Set probability = TRUE for density line
+  
+  mean_val <- mean(diabetes_transformed[[var]], na.rm = TRUE)
+  sd_val <- sd(diabetes_transformed[[var]], na.rm = TRUE)
+  
+  curve(dnorm(x, mean = mean_val, sd = sd_val), 
+        col = "red", 
+        lwd = 2, 
+        add = TRUE)
+}
+
+# Boxplots to identify outliers
+boxplots <- lapply(con_cols, function(var) {
+  ggplot(diabetes_transformed, aes_string(y = var)) +
+    geom_boxplot(fill = 'lightblue', color = 'black') +
+    labs(title = paste("Boxplot of", var)) +
+    theme_minimal()
+})
+
+# Create histograms for each continous predictor variable
+par(mfrow = c(3, 3))  # Arrange the plots in a 3x3 grid
+
+for (var in con_cols) {
+  hist_data <- hist(diabetes_transformed[[var]], 
+                    main = paste("Histogram of", var), 
+                    xlab = var, 
+                    col = "lightblue", 
+                    border = "black", 
+                    probability = TRUE)  # Set probability = TRUE for density line
+  
+  mean_val <- mean(diabetes_transformed[[var]], na.rm = TRUE)
+  sd_val <- sd(diabetes_transformed[[var]], na.rm = TRUE)
+  
+  curve(dnorm(x, mean = mean_val, sd = sd_val), 
+        col = "red", 
+        lwd = 2, 
+        add = TRUE)
+}
+
+# Arrange all boxplots in a 3x3 grid using patchwork
+boxplot_grid <- wrap_plots(boxplots, nrow = 3, ncol = 3)
+print(boxplot_grid)
+
 # Spatial sign transformation
 spatial_sign_trans <- spatialSign(diabetes_transformed)
 diabetes <- cbind(spatial_sign_trans, diabetes %>% dplyr::select(-con_cols))
+
+# Boxplots to identify outliers
+boxplots <- lapply(con_cols, function(var) {
+  ggplot(spatial_sign_trans, aes_string(y = var)) +
+    geom_boxplot(fill = 'lightblue', color = 'black') +
+    labs(title = paste("Boxplot of", var)) +
+    theme_minimal()
+})
+
+# Arrange all boxplots in a 3x3 grid using patchwork
+boxplot_grid <- wrap_plots(boxplots, nrow = 3, ncol = 3)
+print(boxplot_grid)
+
+# Create histograms for each continous predictor variable
+par(mfrow = c(3, 3))  # Arrange the plots in a 3x3 grid
+
+for (var in con_cols) {
+  hist_data <- hist(spatial_sign_trans[[var]], 
+                    main = paste("Histogram of", var), 
+                    xlab = var, 
+                    col = "lightblue", 
+                    border = "black", 
+                    probability = TRUE)  # Set probability = TRUE for density line
+  
+  mean_val <- mean(spatial_sign_trans[[var]], na.rm = TRUE)
+  sd_val <- sd(spatial_sign_trans[[var]], na.rm = TRUE)
+  
+  curve(dnorm(x, mean = mean_val, sd = sd_val), 
+        col = "red", 
+        lwd = 2, 
+        add = TRUE)
+}
+
+# For each categorical variable, create a bar plot showing the distribution of categories
+# Set up an empty list to store the bar plots
+barplots <- list()
+
+# Loop through categorical columns and create bar plots
+for (var in cat_cols) {
+  p <- ggplot(spatial_sign_trans, aes_string(x = var)) +
+    geom_bar(fill = 'lightblue', color = 'black') +
+    labs(title = paste("Barplot of", var)) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
+  
+  # Add the created plot to the list
+  barplots[[var]] <- p
+}
+
+# Use patchwork to arrange the bar plots in a grid layout
+# Adjust the number of rows and columns as needed
+barplot_grid <- wrap_plots(barplots, nrow = 9, ncol = 4)
+
+# Print the grid of barplots
+print(barplot_grid)
 
 # Create dummy variables
 cat_cols <- names(diabetes %>% dplyr::select(where(is.factor)))
